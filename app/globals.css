@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: "Avenir Next LT Pro", system-ui, sans-serif;
+  --font-header: 'DM Serif Display', serif;
+
+  --color-primary: #202e51;
+  --color-secondary: #684091;
+  --btn-primary: #42587D;
+}
+
+@font-face{
+  font-family: 'Avenir Next LT Pro';
+  src: url('/font/AvenirNextLTPro-UltLt.otf') format('opentype');
+  font-weight: 300;
+}
+
+@font-face{
+  font-family: 'Avenir Next LT Pro';
+  src: url('/font/AvenirNextLTPro-Regular.otf') format('opentype');
+  font-weight: 400;
+}
+
+@font-face{
+  font-family: 'Avenir Next LT Pro';
+  src: url('/font/AvenirNextLTPro-Demi.otf') format('opentype');
+  font-weight: 600;
+}
+
+@font-face{
+  font-family: 'Avenir Next LT Pro';
+  src: url('/font/AvenirNextLTPro-Bold.otf') format('opentype');
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: 'DM Serif Display';
+  src: url('/font/DMSerifDisplay-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+
