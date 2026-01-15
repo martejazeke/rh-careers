@@ -62,8 +62,15 @@ export default function CareersClient() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#FAFAFA] to-[#F8FAFC] py-24 md:py-32 px-6" data-theme='light'>
+    <main className="min-h-screen bg-gradient-to-b from-[#FAFAFA] to-[#F8FAFC] py-12 px-6" data-theme='light'>
       <div className="max-w-7xl mx-auto">
+        <div className="mb-12 flex justify-center">
+          <img
+            src='/images/logo.png'
+            alt='Rebus Holdings logo'
+            className="w-36 h-auto"
+          />
+        </div>
         {/* Header Section */}
         <header className="mb-12 px-12">
           <motion.div
@@ -191,6 +198,8 @@ export default function CareersClient() {
           )}
         </div>
       </div>
+          
+          <footer className="mt-8 border-t border-gray-200 py-4 justify-center flex"> <span className="text-sm text-gray-400"> © 2026 Rebus Holdings </span> </footer>
     </main>
   );
 }

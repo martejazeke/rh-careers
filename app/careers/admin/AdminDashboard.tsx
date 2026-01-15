@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Users, Settings, LogOut, Menu, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { CandidateTracking } from "./CandidateTracking";
 import { JobManagement } from "./JobManagement";
 import { SettingsView } from "./SettingsView";

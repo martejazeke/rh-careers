@@ -108,14 +108,23 @@ export default function JobDetailPage() {
   // --- SKELETON CODE END ---
 
   return (
-    <main className="min-h-screen bg-white py-24 px-6 md:px-12" data-theme='light'>
+    <main
+      className="min-h-screen bg-white px-6 md:px-12"
+    >
       <div className="max-w-7xl mx-auto pt-6">
+        <div className="mb-12 flex justify-center">
+          <img
+            src='/images/logo.png'
+            alt='Rebus Holdings logo'
+            className="w-36 h-auto"
+          />
+        </div>
         <Link
           href="/careers"
           className="flex items-center gap-2 text-primary mb-8 group"
         >
           <ChevronLeft className="size-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-header text-xl">{job.title}</span>
+          <span className="font-header text-2xl">{job.title}</span>
         </Link>
 
         <div className="grid lg:grid-cols-[300px_1fr] gap-16">
@@ -213,69 +222,115 @@ export default function JobDetailPage() {
                     onSubmit={handleApplication}
                     className="space-y-4 font-sans"
                   >
-                    <input
-                      name="full_name"
-                      placeholder="Full Name"
-                      required
-                      className="w-full p-3 border border-slate-200 rounded-lg outline-primary transition-all"
-                    />
-                    <input
-                      name="email"
-                      type="email"
-                      placeholder="Email Address"
-                      required
-                      className="w-full p-3 border border-slate-200 rounded-lg outline-primary transition-all"
-                    />
-
-                    <div className="relative group">
-                      {!selectedFile ? (
-                        <div className="border-2 border-dashed border-slate-200 p-8 text-center rounded-lg group-hover:border-primary transition-colors cursor-pointer relative">
-                          <input
-                            name="resume"
-                            type="file"
-                            required
-                            accept=".pdf,.doc,.docx"
-                            onChange={handleFileChange}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                          />
-                          <Upload className="mx-auto mb-2 text-slate-400 group-hover:text-primary transition-colors" />
-                          <p className="text-sm text-slate-500 font-medium">
-                            Upload CV <span className="text-xs">(.pdf, .doc, .docx max 5MB)</span>
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between p-4 bg-slate-50 border border-primary/30 rounded-lg animate-in fade-in zoom-in duration-200">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                              <FileText className="text-primary size-6" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-primary truncate max-w-[200px]">
-                                {selectedFile.name}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {(selectedFile.size / 1024 / 1024).toFixed(2)}{" "}
-                                MB
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedFile(null)}
-                            className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-colors"
-                          >
-                            <X size={20} />
-                          </button>
-                        </div>
-                      )}
+                    {/* Full Name Field */}
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="full_name"
+                        className="text-sm font-semibold text-slate-700 ml-1"
+                      >
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="full_name"
+                        name="full_name"
+                        placeholder="e.g. John Doe"
+                        required
+                        className="w-full p-3 border border-slate-200 rounded-lg outline-primary transition-all"
+                      />
                     </div>
 
-                    <textarea
-                      name="message"
-                      placeholder="Cover Letter / Message"
-                      rows={4}
-                      className="w-full p-3 border border-slate-200 rounded-lg outline-primary transition-all"
-                    />
+                    {/* Email Field */}
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="email"
+                        className="text-sm font-semibold text-slate-700 ml-1"
+                      >
+                        Email Address <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="john@example.com"
+                        required
+                        className="w-full p-3 border border-slate-200 rounded-lg outline-primary transition-all"
+                      />
+                    </div>
+
+                    {/* Resume Upload Field */}
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="resume"
+                        className="text-sm font-semibold text-slate-700 ml-1"
+                      >
+                        Curriculum Vitae (CV) or Resume{" "}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative group">
+                        {!selectedFile ? (
+                          <div className="border-2 border-dashed border-slate-200 p-8 text-center rounded-lg group-hover:border-primary transition-colors cursor-pointer relative">
+                            <input
+                              id="resume"
+                              name="resume"
+                              type="file"
+                              required
+                              accept=".pdf,.doc,.docx"
+                              onChange={handleFileChange}
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                            />
+                            <Upload className="mx-auto mb-2 text-slate-400 group-hover:text-primary transition-colors" />
+                            <p className="text-sm text-slate-500 font-medium">
+                              Upload CV{" "}
+                              <span className="text-xs">
+                                (.pdf, .doc, .docx max 5MB)
+                              </span>
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between p-4 bg-slate-50 border border-primary/30 rounded-lg animate-in fade-in zoom-in duration-200">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-primary/10 rounded-lg">
+                                <FileText className="text-primary size-6" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-primary truncate max-w-[200px]">
+                                  {selectedFile.name}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                  {(selectedFile.size / 1024 / 1024).toFixed(2)}{" "}
+                                  MB
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedFile(null)}
+                              className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-colors"
+                            >
+                              <X size={20} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Message/Cover Letter Field */}
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="message"
+                        className="text-sm font-semibold text-slate-700 ml-1"
+                      >
+                        Cover Letter / Message
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        placeholder="Tell us why you're a good fit..."
+                        rows={4}
+                        className="w-full p-3 border border-slate-200 rounded-lg outline-primary transition-all"
+                      />
+                    </div>
+
                     <button
                       disabled={uploading}
                       className="w-full bg-primary text-white py-4 rounded-xl font-semibold hover:bg-primary/90 disabled:bg-slate-300 transition-all active:scale-[0.98]"

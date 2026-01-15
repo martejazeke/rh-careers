@@ -3,7 +3,6 @@ import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/app/lib/supabase-admin";
 import { cookies } from "next/headers";
 
-// Configure SMTP (Gmail/Outlook)
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,

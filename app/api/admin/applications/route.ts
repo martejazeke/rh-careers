@@ -3,7 +3,6 @@ import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/app/lib/supabase-admin";
 import { cookies } from "next/headers";
 
-// Configure SMTP explicitly to avoid ::1 (localhost) redirect errors
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -61,7 +60,7 @@ export async function GET(req: Request) {
       email: app.email,
       resumeUrl: app.resume_url,
       message: app.message,
-      note: app.admin_note || app.note || "",
+      note: app.admin_note || "",
     }));
 
     return NextResponse.json(transformedData || []);
@@ -70,18 +69,18 @@ export async function GET(req: Request) {
   }
 }
 
-// PATCH update application status & send email
+// PATCH update application (Status, Note, or Contact Details)
 export async function PATCH(req: Request) {
   try {
     const auth = await checkAuth();
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const body = await req.json();
-    const { id, status, note } = body;
+    const { id, status, note, name, email } = body;
 
     if (!id) return NextResponse.json({ error: "Application ID required" }, { status: 400 });
 
-    // 1. Get current application and job details
+    // Fetch existing data for email context
     const { data: application, error: fetchError } = await supabaseAdmin
       .from("applications")
       .select(`*, jobs ( title )`)
@@ -92,10 +91,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
 
-    // 2. Update Database
+    // Build update object dynamically
     const updateData: any = {};
     if (status !== undefined) updateData.status = status;
     if (note !== undefined) updateData.admin_note = note;
+    if (name !== undefined) updateData.full_name = name;
+    if (email !== undefined) updateData.email = email;
 
     const { error: updateError } = await supabaseAdmin
       .from("applications")
@@ -104,38 +105,55 @@ export async function PATCH(req: Request) {
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
-    // 3. Handle Email Notification if status changed
-    if (["Accepted", "Shortlisted", "Rejected"].includes(status)) {
+    // Handle Email Notifications for status changes
+    if (status && ["Accepted", "Shortlisted", "Rejected"].includes(status)) {
       const jobTitle = application.jobs?.title || "the position";
+      const candidateName = name || application.full_name || "Candidate"; // Fix: Use correct field
+      const targetEmail = email || application.email;
+
       let subject = "";
       let htmlContent = "";
 
-      // Logic for email templates
       if (status === "Accepted") {
-        subject = `Congratulations! Application Accepted for ${jobTitle}`;
-        htmlContent = `<div style="font-family: sans-serif;"><h2>Great news, ${application.full_name}!</h2><p>Your application for <b>${jobTitle}</b> has been accepted. We will contact you soon for next steps.</p></div>`;
+        subject = `Congratulations! Your application for ${jobTitle} has been accepted`;
+        htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #059669;">Congratulations, ${candidateName}!</h2>
+            <p>We are pleased to inform you that your application for <strong>${jobTitle}</strong> has been accepted!</p>
+            <p>Our team will contact you shortly for next steps.</p>
+            <p style="margin-top: 30px; color: #666;">Best regards,<br>HR Team | Rebus Holdings</p>
+          </div>`;
       } else if (status === "Shortlisted") {
         subject = `Update: You've been shortlisted for ${jobTitle}`;
-        htmlContent = `<div style="font-family: sans-serif;"><h2>Hi ${application.full_name},</h2><p>You have been shortlisted for <b>${jobTitle}</b>. Our team is reviewing final details.</p></div>`;
+        htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #10b981;">Application Update</h2>
+            <p>Dear ${candidateName},</p>
+            <p>Your application for <strong>${jobTitle}</strong> has been shortlisted! We will contact you soon regarding the next steps.</p>
+            <p style="margin-top: 30px; color: #666;">Best regards,<br>HR Team | Rebus Holdings</p>
+          </div>`;
       } else if (status === "Rejected") {
         subject = `Update on your application for ${jobTitle}`;
-        htmlContent = `<div style="font-family: sans-serif;"><h2>Dear ${application.full_name},</h2><p>We appreciate your interest in <b>${jobTitle}</b>, but we have decided to move forward with other candidates at this time.</p></div>`;
+        htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #475569;">Application Update</h2>
+            <p>Dear ${candidateName},</p>
+            <p>After careful consideration, we have decided to move forward with other candidates for the <strong>${jobTitle}</strong> position.</p>
+            <p>We encourage you to apply for future roles at Rebus Holdings.</p>
+            <p style="margin-top: 30px; color: #666;">Best regards,<br>HR Team | Rebus Holdings</p>
+          </div>`;
       }
 
       try {
         await transporter.sendMail({
           from: `"Rebus HR" <${process.env.EMAIL_USER}>`,
-          to: application.email,
+          to: targetEmail,
           subject,
           html: htmlContent,
         });
-        console.log("✅ Update email sent to:", application.email);
       } catch (err) {
         console.error("❌ Email failed but DB updated:", err);
       }
     }
 
-    return NextResponse.json({ success: true, status });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

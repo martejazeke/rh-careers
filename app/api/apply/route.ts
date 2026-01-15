@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     try {
       await transporter.sendMail({
-        from: `"Rebus Careers" <${process.env.EMAIL_USER}>`,
+        from: `"Rebus Careers" <careers@rebus.ae>`,
         to: "martejazeke@gmail.com",
         subject: `New Application: ${full_name} for ${jobData?.title || "Open Role"}`,
         html: `

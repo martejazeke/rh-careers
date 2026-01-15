@@ -111,22 +111,18 @@ export function CandidateTracking({ jobIdFilter, onClearFilter }: CandidateTrack
       });
 
       if (res.ok) {
-        // Update the candidate in the resume viewer modal if it's open
         const wasModalOpen = resumeViewerModal.candidate && resumeViewerModal.candidate.id === id;
         
-        // Close the modal first
         if (wasModalOpen) {
           setResumeViewerModal({ isOpen: false, candidate: null });
         }
-        
-        // Update local state immediately for better UX
+
         setData((prev) =>
           prev.map((candidate) =>
             candidate.id === id ? { ...candidate, status: newStatus } : candidate
           )
         );
         
-        // Then fetch fresh data from server (with cache busting for production)
         const url = jobIdFilter 
           ? `/api/admin/applications?jobId=${jobIdFilter}&_t=${Date.now()}`
           : `/api/admin/applications?_t=${Date.now()}`;
@@ -136,7 +132,6 @@ export function CandidateTracking({ jobIdFilter, onClearFilter }: CandidateTrack
           const candidates = await refreshRes.json();
           setData(candidates);
           
-          // Update filtered job title if needed
           if (jobIdFilter) {
             if (candidates.length > 0) {
               setFilteredJobTitle(candidates[0].jobPosition);
@@ -177,11 +172,9 @@ export function CandidateTracking({ jobIdFilter, onClearFilter }: CandidateTrack
   const handleDownloadResume = async () => {
     if (resumeViewerModal.candidate?.resumeUrl) {
       try {
-        // Fetch the file as a blob
         const response = await fetch(resumeViewerModal.candidate.resumeUrl);
         const blob = await response.blob();
         
-        // Create a blob URL and trigger download
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = blobUrl;
@@ -190,11 +183,9 @@ export function CandidateTracking({ jobIdFilter, onClearFilter }: CandidateTrack
         link.click();
         document.body.removeChild(link);
         
-        // Clean up the blob URL
         window.URL.revokeObjectURL(blobUrl);
       } catch (error) {
         console.error("Failed to download resume:", error);
-        // Fallback: try direct download
         const link = document.createElement("a");
         link.href = resumeViewerModal.candidate.resumeUrl;
         link.download = `${resumeViewerModal.candidate.name.replace(/\s+/g, "_")}_Resume.pdf`;

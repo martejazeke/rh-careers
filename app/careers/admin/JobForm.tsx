@@ -173,7 +173,7 @@ export function JobForm({ onSubmit, onCancel, initialData, isEdit = false }: Job
         <div className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-xs sm:text-sm font-sans font-medium text-slate-900 mb-2">
-              Job Title *
+              Job Title <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -186,7 +186,7 @@ export function JobForm({ onSubmit, onCancel, initialData, isEdit = false }: Job
           </div>
           <div>
             <label className="block text-xs sm:text-sm font-sans font-medium text-slate-900 mb-2">
-              Department *
+              Department <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.department}
@@ -209,7 +209,7 @@ export function JobForm({ onSubmit, onCancel, initialData, isEdit = false }: Job
         <div className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-xs sm:text-sm font-sans font-medium text-slate-900 mb-2">
-              Location *
+              Location <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.location}
@@ -240,7 +240,7 @@ export function JobForm({ onSubmit, onCancel, initialData, isEdit = false }: Job
             </div>
             <div>
               <label className="block text-xs sm:text-sm font-sans font-medium text-slate-900 mb-2">
-                Employment Type *
+                Employment Type <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.employment_type}
@@ -259,7 +259,7 @@ export function JobForm({ onSubmit, onCancel, initialData, isEdit = false }: Job
           </div>
           <div>
             <label className="block text-xs sm:text-sm font-sans font-medium text-slate-900 mb-2">
-              Work Mode *
+              Work Mode <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.work_mode}
@@ -282,20 +282,7 @@ export function JobForm({ onSubmit, onCancel, initialData, isEdit = false }: Job
         <div className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-xs sm:text-sm font-sans font-medium text-slate-900 mb-2">
-              Job Description *
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => updateField("description", e.target.value)}
-              placeholder="Enter a detailed job description..."
-              rows={6}
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent font-sans resize-none"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-sans font-medium text-slate-900 mb-2">
-              Requirements
+              Requirements 
             </label>
             {formData.requirements.map((req, index) => (
               <div key={index} className="flex gap-2 mb-2">
