@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, DragEvent } from "react";
 import { useParams } from "next/navigation";
 import { ChevronLeft, Upload, FileText, X, BadgeCheck } from "lucide-react";
 import Link from "next/link";
@@ -19,20 +19,50 @@ export default function JobDetailPage() {
   const [submitted, setSubmitted] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // State to track if a file is being dragged over the upload area
+  const [isDragging, setIsDragging] = useState(false);
+
   useEffect(() => {
     fetch(`/api/jobs/${id}`)
       .then((res) => res.json())
       .then((data) => setJob(data));
   }, [id]);
 
+  // Unified file validation for both Click and Drag/Drop
+  const validateAndSetFile = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File is too large. Please upload a PDF under 5MB.");
+      return;
+    }
+    setSelectedFile(file);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File is too large. Please upload a PDF under 5MB.");
-        return;
-      }
-      setSelectedFile(file);
+      validateAndSetFile(e.target.files[0]);
+    }
+  };
+
+  // --- Drag & Drop Handlers ---
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      validateAndSetFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -75,7 +105,6 @@ export default function JobDetailPage() {
     setUploading(false);
   };
 
-  // --- SKELETON CODE START ---
   if (!job)
     return (
       <main className="min-h-screen bg-white py-24 px-6 md:px-12 animate-pulse">
@@ -105,17 +134,14 @@ export default function JobDetailPage() {
         </div>
       </main>
     );
-  // --- SKELETON CODE END ---
 
   return (
-    <main
-      className="min-h-screen bg-white px-6 md:px-12"
-    >
+    <main className="min-h-screen bg-white px-6 py-6 md:px-12 md:py-12">
       <div className="max-w-7xl mx-auto pt-6">
         <div className="mb-12 flex justify-center">
           <img
-            src='/images/logo.png'
-            alt='Rebus Holdings logo'
+            src="/images/logo.png"
+            alt="Rebus Holdings logo"
             className="w-36 h-auto"
           />
         </div>
@@ -157,7 +183,6 @@ export default function JobDetailPage() {
 
             {activeTab === "overview" ? (
               <div className="space-y-12 animate-in fade-in duration-500">
-                {/* Responsibilities */}
                 <section>
                   <h4 className="text-primary font-semibold text-xl mb-6 flex items-center gap-2">
                     <div className="h-8 w-1 bg-primary" />
@@ -181,7 +206,6 @@ export default function JobDetailPage() {
                   )}
                 </section>
 
-                {/* Requirements */}
                 <section>
                   <h4 className="text-primary font-semibold text-xl mb-6 flex items-center gap-2">
                     <div className="h-8 w-1 bg-primary" />
@@ -222,7 +246,6 @@ export default function JobDetailPage() {
                     onSubmit={handleApplication}
                     className="space-y-4 font-sans"
                   >
-                    {/* Full Name Field */}
                     <div className="space-y-1.5">
                       <label
                         htmlFor="full_name"
@@ -239,7 +262,6 @@ export default function JobDetailPage() {
                       />
                     </div>
 
-                    {/* Email Field */}
                     <div className="space-y-1.5">
                       <label
                         htmlFor="email"
@@ -257,18 +279,24 @@ export default function JobDetailPage() {
                       />
                     </div>
 
-                    {/* Resume Upload Field */}
+                    {/* Resume Upload*/}
                     <div className="space-y-1.5">
-                      <label
-                        htmlFor="resume"
-                        className="text-sm font-semibold text-slate-700 ml-1"
-                      >
+                      <label className="text-sm font-semibold text-slate-700 ml-1">
                         Curriculum Vitae (CV) or Resume{" "}
                         <span className="text-red-500">*</span>
                       </label>
                       <div className="relative group">
                         {!selectedFile ? (
-                          <div className="border-2 border-dashed border-slate-200 p-8 text-center rounded-lg group-hover:border-primary transition-colors cursor-pointer relative">
+                          <div
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            className={`border-2 border-dashed p-8 text-center rounded-lg transition-all cursor-pointer relative ${
+                              isDragging
+                                ? "border-primary bg-primary/5 scale-[1.01]"
+                                : "border-slate-200 group-hover:border-primary"
+                            }`}
+                          >
                             <input
                               id="resume"
                               name="resume"
@@ -278,10 +306,18 @@ export default function JobDetailPage() {
                               onChange={handleFileChange}
                               className="absolute inset-0 opacity-0 cursor-pointer"
                             />
-                            <Upload className="mx-auto mb-2 text-slate-400 group-hover:text-primary transition-colors" />
+                            <Upload
+                              className={`mx-auto mb-2 transition-colors ${
+                                isDragging
+                                  ? "text-primary"
+                                  : "text-slate-400 group-hover:text-primary"
+                              }`}
+                            />
                             <p className="text-sm text-slate-500 font-medium">
-                              Upload CV{" "}
-                              <span className="text-xs">
+                              {isDragging
+                                ? "Drop resume here"
+                                : "Upload or drag CV here"}
+                              <span className="block text-xs mt-1">
                                 (.pdf, .doc, .docx max 5MB)
                               </span>
                             </p>
@@ -314,7 +350,6 @@ export default function JobDetailPage() {
                       </div>
                     </div>
 
-                    {/* Message/Cover Letter Field */}
                     <div className="space-y-1.5">
                       <label
                         htmlFor="message"
