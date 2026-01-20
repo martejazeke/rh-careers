@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { supabaseAdmin } from "@/app/lib/supabase-admin";
+import { createClient } from "@/app/lib/supabase-server";
 
 export async function POST(req: Request) {
   try {
@@ -13,7 +13,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -33,6 +35,8 @@ export async function POST(req: Request) {
     }
 
     const cookieStore = await cookies();
+    
+    // Set cookies using the session tokens from the user login
     cookieStore.set("sb-access-token", data.session.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -58,4 +62,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

@@ -108,7 +108,7 @@ export async function PATCH(req: Request) {
     // Handle Email Notifications for status changes
     if (status && ["Accepted", "Shortlisted", "Rejected"].includes(status)) {
       const jobTitle = application.jobs?.title || "the position";
-      const candidateName = name || application.full_name || "Candidate"; // Fix: Use correct field
+      const candidateName = name || application.full_name || "Candidate";
       const targetEmail = email || application.email;
 
       let subject = "";
@@ -143,7 +143,7 @@ export async function PATCH(req: Request) {
 
       try {
         await transporter.sendMail({
-          from: `"Rebus HR" <${process.env.EMAIL_USER}>`,
+          from: `"Rebus HR" <careers@rebus.ae>`,
           to: targetEmail,
           subject,
           html: htmlContent,

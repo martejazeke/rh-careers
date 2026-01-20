@@ -83,16 +83,16 @@ export async function POST(req: Request) {
     // Send the Email
     try {
       await transporter.sendMail({
-        from: `"Rebus Holdings" <${process.env.EMAIL_USER}>`,
+        from: `"Rebus Holdings" <careers@rebus.ae>`,
         to: candidateEmail,
         subject: subject,
         html: htmlContent,
       });
 
-      console.log(`✅ Email sent to candidate: ${candidateEmail}`);
+      console.log(`Email sent to candidate: ${candidateEmail}`);
       return NextResponse.json({ success: true });
     } catch (emailError: any) {
-      console.error("❌ Nodemailer failed:", emailError.message);
+      console.error("Nodemailer failed:", emailError.message);
       return NextResponse.json({ error: "Email service failed" }, { status: 500 });
     }
 
