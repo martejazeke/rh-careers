@@ -1,30 +1,38 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabase-admin";
 import { cookies } from "next/headers";
+import { logError, errorResponse } from "@/app/lib/api-utils";
+import { ERROR_MESSAGES } from "@/app/lib/constants";
 
-async function checkAuth() {
+/**
+ * Validates user authentication via session token
+ */
+async function validateAuth() {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("sb-access-token")?.value;
 
   if (!accessToken) {
-    return { error: "Unauthorized", status: 401 };
+    return { valid: false, error: ERROR_MESSAGES.UNAUTHORIZED, status: 401 };
   }
 
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
 
   if (error || !user) {
-    return { error: "Unauthorized", status: 401 };
+    return { valid: false, error: ERROR_MESSAGES.UNAUTHORIZED, status: 401 };
   }
 
-  return { user };
+  return { valid: true, user };
 }
 
-// GET application counts per job
+/**
+ * GET /api/admin/applications/stats
+ * Returns count of applications per job
+ */
 export async function GET() {
   try {
-    const auth = await checkAuth();
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const auth = await validateAuth();
+    if (!auth.valid) {
+      return errorResponse(auth.error || ERROR_MESSAGES.UNAUTHORIZED, auth.status);
     }
 
     const { data, error } = await supabaseAdmin
@@ -32,21 +40,19 @@ export async function GET() {
       .select("job_id");
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      logError("Failed to fetch application stats", error);
+      return errorResponse(ERROR_MESSAGES.FETCH_FAILED, 500);
     }
 
-    // Count applications per job
     const counts: Record<string, number> = {};
     data?.forEach((app) => {
       counts[app.job_id] = (counts[app.job_id] || 0) + 1;
     });
 
     return NextResponse.json(counts);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    logError("GET /api/admin/applications/stats", error);
+    return errorResponse(ERROR_MESSAGES.INTERNAL_ERROR, 500);
   }
 }
 

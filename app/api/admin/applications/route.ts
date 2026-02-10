@@ -2,39 +2,54 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/app/lib/supabase-admin";
 import { cookies } from "next/headers";
+import { appConfig } from "@/app/lib/config";
+import { getEmailTemplate } from "@/app/lib/email-templates";
+import { logError, errorResponse } from "@/app/lib/api-utils";
+import { ERROR_MESSAGES } from "@/app/lib/constants";   
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+/**
+ * Creates email transporter
+ */
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: "smtp.office365.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: appConfig.email.user,
+      pass: appConfig.email.pass,
+    },
+  });
+};
 
-async function checkAuth() {
+/**
+ * Validates user authentication via session token
+ */
+async function validateAuth() {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("sb-access-token")?.value;
 
   if (!accessToken) {
-    return { error: "Unauthorized: Please log in", status: 401 };
+    return { valid: false, error: ERROR_MESSAGES.UNAUTHORIZED, status: 401 };
   }
 
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
 
   if (error || !user) {
-    return { error: "Unauthorized: Invalid session", status: 401 };
+    return { valid: false, error: ERROR_MESSAGES.UNAUTHORIZED, status: 401 };
   }
 
-  return { user };
+  return { valid: true, user };
 }
 
-// GET all applications
+/**
+ * GET /api/admin/applications
+ * Retrieves applications with optional filtering by status and job
+ */
 export async function GET(req: Request) {
   try {
-    const auth = await checkAuth();
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const auth = await validateAuth();
+    if (!auth.valid) return errorResponse(auth.error, auth.status);
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -42,21 +57,24 @@ export async function GET(req: Request) {
 
     let query = supabaseAdmin
       .from("applications")
-      .select(`*, jobs (id, title, department)`)
+      .select("*, jobs (id, title, department)")
       .order("created_at", { ascending: false });
 
     if (status) query = query.eq("status", status);
     if (jobId) query = query.eq("job_id", jobId);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      logError("Failed to fetch applications", error);
+      return errorResponse(ERROR_MESSAGES.FETCH_FAILED, 500);
+    }
 
     const transformedData = data?.map((app: any) => ({
       id: app.id,
       name: app.full_name,
       jobPosition: app.jobs?.title || "Unknown",
       dateApplied: app.created_at,
-      status: app.status || "Pending",
+      status: app.status || "Applied",
       email: app.email,
       resumeUrl: app.resume_url,
       message: app.message,
@@ -64,35 +82,37 @@ export async function GET(req: Request) {
     }));
 
     return NextResponse.json(transformedData || []);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    logError("GET /api/admin/applications", error);
+    return errorResponse(ERROR_MESSAGES.INTERNAL_ERROR, 500);
   }
 }
 
-// PATCH update application (Status, Note, or Contact Details)
+/**
+ * PATCH /api/admin/applications
+ * Updates application status, notes, or candidate details and sends email notifications
+ */
 export async function PATCH(req: Request) {
   try {
-    const auth = await checkAuth();
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const auth = await validateAuth();
+    if (!auth.valid) return errorResponse(auth.error, auth.status);
 
     const body = await req.json();
     const { id, status, note, name, email } = body;
 
-    if (!id) return NextResponse.json({ error: "Application ID required" }, { status: 400 });
+    if (!id) return errorResponse("Application ID required", 400);
 
-    // Fetch existing data for email context
     const { data: application, error: fetchError } = await supabaseAdmin
       .from("applications")
-      .select(`*, jobs ( title )`)
+      .select("*, jobs ( title )")
       .eq("id", id)
       .single();
 
     if (fetchError || !application) {
-      return NextResponse.json({ error: "Application not found" }, { status: 404 });
+      return errorResponse("Application not found", 404);
     }
 
-    // Build update object dynamically
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (status !== undefined) updateData.status = status;
     if (note !== undefined) updateData.admin_note = note;
     if (name !== undefined) updateData.full_name = name;
@@ -103,78 +123,61 @@ export async function PATCH(req: Request) {
       .update(updateData)
       .eq("id", id);
 
-    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (updateError) {
+      logError("Failed to update application", updateError);
+      return errorResponse(ERROR_MESSAGES.UPDATE_FAILED, 500);
+    }
 
-    // Handle Email Notifications for status changes
     if (status && ["Accepted", "Shortlisted", "Rejected"].includes(status)) {
       const jobTitle = application.jobs?.title || "the position";
       const candidateName = name || application.full_name || "Candidate";
       const targetEmail = email || application.email;
 
-      let subject = "";
-      let htmlContent = "";
-
-      if (status === "Accepted") {
-        subject = `Congratulations! Your application for ${jobTitle} has been accepted`;
-        htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0;">
-            <h2 style="color: #059669;">Congratulations, ${candidateName}!</h2>
-            <p>We are pleased to inform you that your application for <strong>${jobTitle}</strong> has been accepted!</p>
-            <p>Our team will contact you shortly for next steps.</p>
-            <p style="margin-top: 30px; color: #666;">Best regards,<br>HR Team | Rebus Holdings</p>
-          </div>`;
-      } else if (status === "Shortlisted") {
-        subject = `Update: You've been shortlisted for ${jobTitle}`;
-        htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0;">
-            <h2 style="color: #10b981;">Application Update</h2>
-            <p>Dear ${candidateName},</p>
-            <p>Your application for <strong>${jobTitle}</strong> has been shortlisted! We will contact you soon regarding the next steps.</p>
-            <p style="margin-top: 30px; color: #666;">Best regards,<br>HR Team | Rebus Holdings</p>
-          </div>`;
-      } else if (status === "Rejected") {
-        subject = `Update on your application for ${jobTitle}`;
-        htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0;">
-            <h2 style="color: #475569;">Application Update</h2>
-            <p>Dear ${candidateName},</p>
-            <p>After careful consideration, we have decided to move forward with other candidates for the <strong>${jobTitle}</strong> position.</p>
-            <p>We encourage you to apply for future roles at Rebus Holdings.</p>
-            <p style="margin-top: 30px; color: #666;">Best regards,<br>HR Team | Rebus Holdings</p>
-          </div>`;
-      }
-
       try {
+        const emailTemplate = getEmailTemplate(status as any, candidateName, jobTitle);
+        const transporter = createTransporter();
+
         await transporter.sendMail({
           from: `"Rebus HR" <careers@rebus.ae>`,
           to: targetEmail,
-          subject,
-          html: htmlContent,
+          subject: emailTemplate.subject,
+          html: emailTemplate.htmlContent,
         });
       } catch (err) {
-        console.error("❌ Email failed but DB updated:", err);
+        logError("Email notification failed but update succeeded", err);
       }
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    logError("PATCH /api/admin/applications", error);
+    return errorResponse(ERROR_MESSAGES.INTERNAL_ERROR, 500);
   }
 }
 
-// DELETE application
+/**
+ * DELETE /api/admin/applications
+ * Deletes an application
+ */
 export async function DELETE(req: Request) {
   try {
-    const auth = await checkAuth();
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const auth = await validateAuth();
+    if (!auth.valid) return errorResponse(auth.error, auth.status);
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
-    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    if (!id) return errorResponse("ID required", 400);
 
     const { error } = await supabaseAdmin.from("applications").delete().eq("id", id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      logError("Failed to delete application", error);
+      return errorResponse(ERROR_MESSAGES.DELETE_FAILED, 500);
+    }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    logError("DELETE /api/admin/applications", error);
+    return errorResponse(ERROR_MESSAGES.INTERNAL_ERROR, 500);
   }
 }
